@@ -1,0 +1,26 @@
+# نظام التشغيل
+.DS_Store
+Thumbs.db
+*.swp
+
+# محرّرات
+.vscode/
+.idea/
+
+# اعتماديات (المشروع لا يحتاجها، لكن تحسّباً)
+node_modules/
+
+# أسرار — لا تُرفع أبداً
+.env
+.env.*
+*.pem
+secrets.json
+.deploy-secrets
+
+# نسخ احتياطية مصدَّرة من النظام (فيها بيانات شخصية)
+life-os-*.json
+backups/
+
+# ملفات مؤقتة
+*.log
+.cache/
