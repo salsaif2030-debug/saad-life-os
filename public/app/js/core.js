@@ -4,8 +4,8 @@
    ============================================================ */
 
 /* ===== إعدادات الاتصال (يعبّئها سعد من Supabase ← Settings ← API) ===== */
-const SUPA_URL = '';   // مثال: 'https://xxxx.supabase.co'
-const SUPA_KEY = '';   // مثال: 'sb_publishable_xxxx'
+const SUPA_URL = 'https://kyzqhflbovlquxflascm.supabase.co';
+const SUPA_KEY = 'sb_publishable_eMjKYZVuP3PjeEFc0Sr1Rg_HWRS8qii';
 
 const APP_KEY  = 'saad_life_os_v1';
 const CLOUD_ON = !!(SUPA_URL && SUPA_KEY);
