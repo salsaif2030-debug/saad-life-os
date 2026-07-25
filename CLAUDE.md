@@ -23,10 +23,18 @@ public/app/js/canvas.js  المساحة الحرة: ألواح لا نهائية
 public/app/js/work.js    صفحة العمل: حملات · اجتماعات · مؤشرات — وفيه محرّك الكانبان `kb*`
 public/app/js/business.js صفحة التجارة: مسار الصفقات · تقويم المحتوى (يستعمل `kb*`)
 public/app/js/app.js     التوجيه · اللوحة · مراجعة اليوم · المراجعة الأسبوعية · الإعدادات · الدخول
-public/mirsad/           تطبيق مرصاد (لحاتم النجار) — إعداداته في firebase-config.js
+public/mirsad/           تطبيق مرصاد (لحاتم النجار) — منقول من Firebase إلى Supabase
+public/mirsad/supabase-bridge.js  يصدّر واجهة Firebase وينفّذها على Supabase
 supabase/life_os.sql     الجداول وسياسات الحماية RLS
+supabase/mirsad.sql      جدول mirsad_docs وسياساته
 test/smoke.js            اختبار يشغّل كل الشاشات في DOM مصغّرة
+test/mirsad.js           اختبار جسر مرصاد على عميل Supabase وهمي
 ```
+
+**مرصاد**: مكتوب أصلاً على Firestore. لا تعدّل `public/mirsad/index.html` إلا لضرورة —
+هو ملف طرف ثالث بحجم ٥٠٠ كيلوبايت. التغيير يكون في `supabase-bridge.js`.
+كل مستند صفّ في `mirsad_docs`: المسار مفتاحه و`data` محتواه، والحماية `auth.uid() = owner`.
+المشاركة بين الحسابات معطّلة في هذه النسخة عمداً.
 
 الترتيب في `index.html` مهم:
 `core` ← `widgets` ← `areas` ← `timebox` ← `canvas` ← `work` ← `business` ← `app`
@@ -92,6 +100,7 @@ S.widgets[] · S.links[] · S.focus · S.prayer
 
 ```bash
 node test/smoke.js     # لازم: كل الاختبارات نجحت ✓
+node test/mirsad.js    # إن لمست جسر مرصاد
 ```
 
 وإن أضفت شاشة أو قسماً أو ويدجت — **أضف له اختباراً** في `test/tests-body.js`.

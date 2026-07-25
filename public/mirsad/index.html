@@ -3302,7 +3302,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<script src="./firebase-config.js"></script>
 </head>
 <body>
 
@@ -4001,13 +4000,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 <script type="module">
-import { initializeApp, getApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+/* هذه النسخة تعمل على قاعدة بيانات سعد في Supabase لا على Firebase.
+   supabase-bridge.js يصدّر الأسماء نفسها وينفّذها على Supabase. */
+import { initializeApp, getApp } from './supabase-bridge.js';
 import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence, browserPopupRedirectResolver, GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, getRedirectResult, signOut, onAuthStateChanged, updateProfile, updateEmail }
-  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  from './supabase-bridge.js';
 import { getFirestore, doc, collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot, query, where, arrayUnion, arrayRemove, addDoc, orderBy }
-  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  from './supabase-bridge.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
-  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+  from './supabase-bridge.js';
 
 // ══════════════════════════════════════════
 //  Folders storage
@@ -10108,25 +10109,11 @@ function toggleTheme() {
 }
 
 // ══════════════════════════════════════════
-//  Firebase
+//  قاعدة البيانات (Supabase عبر supabase-bridge.js)
 // ══════════════════════════════════════════
 
-/* الإعدادات تأتي من firebase-config.js — نسخة سعد على مشروع Firebase خاصّ به،
-   لا على مشروع المطوّر الأصلي (mersad-hatem). */
-const firebaseConfig = window.MIRSAD_FIREBASE || {};
-if (!firebaseConfig.projectId) {
-  document.body.innerHTML = `<div style="direction:rtl;font-family:system-ui,sans-serif;max-width:520px;margin:18vh auto;padding:26px;
-      background:#141417;color:#f4f4f6;border-radius:18px;line-height:1.9;text-align:right">
-    <h2 style="margin:0 0 10px">مرصاد لم يُربط بعد</h2>
-    <p style="color:#a5a5b0;margin:0 0 14px">افتح <code>public/mirsad/firebase-config.js</code> واملأ إعدادات مشروع Firebase الخاص بك،
-    ثم أعِد تحميل الصفحة. الخطوات مشروحة داخل الملف نفسه.</p>
-    <a href="../app/" style="color:#5b6cf5;font-weight:700">← عودة إلى نظام سعد</a>
-  </div>`;
-  throw new Error('Mirsad: firebase-config.js غير مُعبّأ');
-}
-
 let fbApp;
-try { fbApp = getApp(); } catch(e) { fbApp = initializeApp(firebaseConfig); }
+try { fbApp = getApp(); } catch(e) { fbApp = initializeApp(); }
 
 // IndexedDB persistence — more reliable than sessionStorage on iOS WKWebView
 let auth;
