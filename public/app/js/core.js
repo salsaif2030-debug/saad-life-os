@@ -149,7 +149,8 @@ function defaultState() {
     settings: {
       theme: 'auto', accent: '#5b6cf5', density: 'comfy',
       dayStart: '05:00', dayEnd: '24:00', slotMin: 30,
-      wallpaper: '', seeded: [], ui: { sbW: 248, sbCollapsed: false }
+      wallpaper: '', wpRotate: 'off', wpDim: 0, glass: false,
+      home: 'dashboard', seeded: [], ui: { sbW: 248, sbCollapsed: false }
     },
     areas: defaultAreas(),
     tasks: [],      // {id,title,areaId,goalId,status,priority,due,est,notes,createdAt,doneAt}
@@ -275,12 +276,20 @@ async function loadCloud() {
 function applyTheme() {
   const t = (S.settings && S.settings.theme) || 'auto';
   const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  document.documentElement.style.setProperty('--accent', S.settings.accent || '#5b6cf5');
-  document.documentElement.dataset.density = S.settings.density || 'comfy';
-  const wp = S.settings.wallpaper;
-  document.body.style.backgroundImage = wp ? `url("${wp}")` : '';
+  const root = document.documentElement;
+  root.dataset.theme = dark ? 'dark' : 'light';
+  root.style.setProperty('--accent', S.settings.accent || '#5b6cf5');
+  root.dataset.density = S.settings.density || 'comfy';
+  /* الخلفية الفعلية قد تكون متغيّرة تلقائياً — المنطق في desk.js */
+  const wp = typeof effectiveWallpaper === 'function' ? effectiveWallpaper() : (S.settings.wallpaper || '');
+  const dim = clamp(+S.settings.wpDim || 0, 0, 80) / 100;
+  const rgb = dark ? '0,0,0' : '255,255,255';
+  const layers = [];
+  if (dim > 0) layers.push(`linear-gradient(rgba(${rgb},${dim}),rgba(${rgb},${dim}))`);
+  if (wp) layers.push(typeof wpCSS === 'function' ? wpCSS(wp) : `url("${wp}")`);
+  document.body.style.backgroundImage = wp ? layers.join(',') : '';
   document.body.classList.toggle('has-wp', !!wp);
+  root.dataset.glass = S.settings.glass ? 'on' : 'off';
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if ((S.settings || {}).theme === 'auto') applyTheme(); });
 

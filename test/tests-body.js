@@ -125,6 +125,45 @@ t('زرع رابط Keep مرّة واحدة', () => {
   migrate();
   if (S.links.some(l => l.url.includes('keep.google.com'))) throw new Error('عاد رابط محذوف');
 });
+console.log('\n— المكتب والخلفيات —');
+t('صفحة المكتب تعرض كل التطبيقات', () => {
+  renderDesk();
+  const html = $('#view').innerHTML;
+  ['تخطيط اليوم', 'العمل', 'التجارة', 'المساحة الحرة'].forEach(n => { if (!html.includes(n)) throw new Error('غاب: ' + n); });
+  S.areas.filter(a => !a.hidden).forEach(a => { if (!html.includes(a.name)) throw new Error('غاب الجانب: ' + a.name); });
+  (S.links || []).forEach(l => { if (!html.includes(l.label)) throw new Error('غابت الأداة: ' + l.label); });
+});
+t('اختيار خلفية يوقف التبديل التلقائي', () => {
+  S.settings.wpRotate = 'day';
+  setWallpaper('./wallpapers/tahoe-dark.jpg');
+  if (S.settings.wpRotate !== 'off') throw new Error('بقي التبديل التلقائي شغّالاً');
+  if (S.settings.wallpaper !== './wallpapers/tahoe-dark.jpg') throw new Error('لم تُحفظ الخلفية');
+});
+t('الخلفية اليومية ثابتة خلال اليوم', () => {
+  S.settings.wpRotate = 'day';
+  const a = effectiveWallpaper(), b = effectiveWallpaper();
+  if (a !== b) throw new Error('تتغيّر مع كل استدعاء');
+  if (!a.includes('/wallpapers/')) throw new Error('ليست من مجموعة الخلفيات');
+});
+t('خلفية وقت اليوم تتبع الساعة', () => {
+  S.settings.wpRotate = 'time';
+  if (!effectiveWallpaper().includes('/wallpapers/')) throw new Error('لم تُختر خلفية');
+  S.settings.wpRotate = 'off';
+});
+t('التدرّج اللوني يُكتب بلا url()', () => {
+  const g = WP_GRADIENTS[0].css;
+  if (wpCSS(g) !== g) throw new Error('لُفّ التدرّج بـurl()');
+  if (wpCSS('./wallpapers/x.jpg') !== 'url("./wallpapers/x.jpg")') throw new Error('الصورة لم تُلفّ بـurl()');
+});
+t('التعتيم والوضع الزجاجي يُطبَّقان', () => {
+  S.settings.wallpaper = './wallpapers/tahoe-dark.jpg'; setWpDim(40); setGlass(true);
+  if (!/rgba\(/.test(document.body.style.backgroundImage || '')) throw new Error('لم تُضف طبقة التعتيم');
+  if (document.documentElement.dataset.glass !== 'on') throw new Error('لم يُفعّل الوضع الزجاجي');
+  setGlass(false); setWpDim(0); S.settings.wallpaper = '';
+  applyTheme();
+  if (document.body.style.backgroundImage) throw new Error('بقيت الخلفية بعد إزالتها');
+});
+
 console.log('\n— المساحة الحرة —');
 t('قائمة الألواح فارغة', () => renderCanvas(''));
 t('إنشاء لوح', () => {

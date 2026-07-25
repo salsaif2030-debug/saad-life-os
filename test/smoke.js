@@ -44,7 +44,7 @@ global.setInterval = () => 0;
 global.requestAnimationFrame = () => 0;
 global.Notification = undefined;
 
-const files = ['core.js', 'widgets.js', 'areas.js', 'timebox.js', 'canvas.js', 'work.js', 'business.js', 'app.js'];
+const files = ['core.js', 'widgets.js', 'areas.js', 'timebox.js', 'canvas.js', 'desk.js', 'work.js', 'business.js', 'app.js'];
 const code = files.map(f => fs.readFileSync(path.join(APP, 'js', f), 'utf8')).join('\n;\n');
 const TESTS = fs.readFileSync(__dirname + '/tests-body.js', 'utf8');
 const errs = [];

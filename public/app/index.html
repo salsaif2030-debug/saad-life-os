@@ -310,6 +310,61 @@ input[type=checkbox]{width:auto}
 .qlinks a:hover{border-color:var(--accent);color:var(--accent)}
 .qlinks a svg{width:13px;height:13px}
 
+/* ===== المكتب: مكتبة التطبيقات ===== */
+.desk-h{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:26px 0 14px}
+.desk-h:first-of-type{margin-top:4px}
+.desk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:22px 10px}
+.desk-app{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;padding:0;background:none;border:none;color:inherit}
+.desk-app .ic{
+  position:relative;width:62px;height:62px;border-radius:17px;display:grid;place-items:center;flex:none;
+  box-shadow:0 2px 5px rgba(16,16,26,.16),0 12px 26px -12px rgba(16,16,26,.5);
+  transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s;
+}
+/* لمعة علوية خفيفة تعطي الأيقونة حجماً كأيقونات النظام */
+.desk-app .ic::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.desk-app .ic svg{width:27px;height:27px;color:#fff;stroke-width:2}
+.desk-app .lb{font-size:12px;font-weight:600;line-height:1.4;text-align:center;color:var(--ink2);max-width:92px}
+.desk-app:hover .ic{transform:translateY(-3px) scale(1.04);box-shadow:0 4px 8px rgba(16,16,26,.2),0 18px 34px -14px rgba(16,16,26,.6)}
+.desk-app:hover .lb{color:var(--ink)}
+.desk-app:active .ic{transform:scale(.96)}
+@media(max-width:520px){
+  .desk-grid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:18px 6px}
+  .desk-app .ic{width:56px;height:56px;border-radius:15px}
+  .desk-app .ic svg{width:24px;height:24px}
+  .desk-app .lb{font-size:11px;max-width:80px}
+}
+
+/* منتقي الخلفيات */
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin-bottom:20px}
+.wp-cell{display:flex;flex-direction:column;gap:5px;padding:0;background:none;border:none;text-align:center}
+.wp-cell .th{display:block;height:64px;border-radius:10px;border:2px solid transparent;box-shadow:var(--shadow);transition:.14s}
+.wp-cell:hover .th{border-color:var(--line2)}
+.wp-cell.on .th{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.wp-cell .nm{font-size:11px;color:var(--muted)}
+.wp-cell.on .nm{color:var(--accent);font-weight:700}
+input[type=range]{-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--surface3);border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
+
+/* ===== الوضع الزجاجي ===== */
+:root[data-glass="on"] .card,
+:root[data-glass="on"] .widget,
+:root[data-glass="on"] .sec,
+:root[data-glass="on"] .area-card,
+:root[data-glass="on"] .tb-grid,
+:root[data-glass="on"] .cv-stage,
+:root[data-glass="on"] .kb-col,
+:root[data-glass="on"] .modal,
+:root[data-glass="on"] .palette .box{
+  background:color-mix(in srgb,var(--surface) 60%,transparent);
+  backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);
+  border-color:color-mix(in srgb,var(--ink) 12%,transparent);
+}
+:root[data-glass="on"] .kb-card,
+:root[data-glass="on"] .rec,
+:root[data-glass="on"] .pool .pi{background:color-mix(in srgb,var(--surface) 55%,transparent)}
+:root[data-glass="on"] .slot .hr{background:color-mix(in srgb,var(--surface2) 45%,transparent)}
+:root[data-glass="on"] .tabbar{background:color-mix(in srgb,var(--surface) 72%,transparent)}
+
 /* ===== تبويبات ===== */
 .tabs{display:flex;gap:2px;margin-bottom:18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .tabs button{padding:9px 15px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.14s}
@@ -450,6 +505,7 @@ input[type=checkbox]{width:auto}
         <h2 id="ctTitle">الرئيسية</h2>
       </div>
       <span class="date" id="ctDate"></span>
+      <button class="icon-btn" onclick="go('desk')" title="المكتب — كل التطبيقات"><i data-lucide="layout-grid"></i></button>
       <button class="icon-btn" onclick="openPalette()" title="بحث سريع (⌘K)"><i data-lucide="search"></i></button>
       <button class="icon-btn" onclick="toggleTheme()" title="المظهر"><i data-lucide="sun-moon"></i></button>
     </header>
@@ -467,6 +523,7 @@ input[type=checkbox]{width:auto}
 <script src="./js/areas.js"></script>
 <script src="./js/timebox.js"></script>
 <script src="./js/canvas.js"></script>
+<script src="./js/desk.js"></script>
 <script src="./js/work.js"></script>
 <script src="./js/business.js"></script>
 <script src="./js/app.js"></script>

@@ -4,6 +4,7 @@
 
 const ROUTES = {
   dashboard: renderDashboard,
+  desk:      renderDesk,
   timebox:   renderTimebox,
   tasks:     renderTasks,
   area:      renderArea,
@@ -15,7 +16,7 @@ const ROUTES = {
   review:    renderReview,
   settings:  renderSettings
 };
-const TITLES = { dashboard: 'الرئيسية', timebox: 'تخطيط اليوم', tasks: 'المهام', notes: 'الملاحظات', daily: 'مراجعة اليوم',
+const TITLES = { dashboard: 'الرئيسية', desk: 'المكتب', timebox: 'تخطيط اليوم', tasks: 'المهام', notes: 'الملاحظات', daily: 'مراجعة اليوم',
                  canvas: 'المساحة الحرة', work: 'العمل', business: 'التجارة', review: 'المراجعة الأسبوعية', settings: 'الإعدادات' };
 
 function go(view, arg) {
@@ -37,6 +38,7 @@ function renderNav() {
   const openT = (S.tasks || []).filter(t => t.status !== 'done').length;
   const inbox = (S.capture || []).filter(c => !c.done).length;
   $('#nav').innerHTML = `
+    <a data-v="desk" onclick="go('desk')"><i data-lucide="layout-grid"></i> المكتب</a>
     <a data-v="dashboard" onclick="go('dashboard')"><i data-lucide="layout-dashboard"></i> الرئيسية</a>
     <a data-v="timebox" onclick="go('timebox')"><i data-lucide="calendar-clock"></i> تخطيط اليوم</a>
     <a data-v="tasks" onclick="go('tasks')"><i data-lucide="check-square"></i> المهام ${openT ? `<span class="cnt">${openT}</span>` : ''}</a>
@@ -350,10 +352,10 @@ function renderSettings() {
           ${ACCENTS.map(c => `<button onclick="setAccent('${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};border:2px solid ${st.accent === c ? 'var(--ink)' : 'transparent'}"></button>`).join('')}</div>`)}
         ${field('الكثافة', `<select id="s_dens" onchange="S.settings.density=this.value;save();applyTheme()">
           ${[['comfy', 'مريحة'], ['compact', 'مضغوطة']].map(([v, l]) => `<option value="${v}" ${st.density === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
-        ${field('خلفية الشاشة', `<select id="s_wp" onchange="S.settings.wallpaper=this.value;save();applyTheme()">
-          <option value="">بلا خلفية (أنقى)</option>
-          ${['tahoe-dark', 'tahoe-blue', 'tahoe-flow', 'tahoe-sunset', 'sequoia-forest', 'monterey-dark', 'monterey-black', 'bigsur-color']
-            .map(w => `<option value="./wallpapers/${w}.jpg" ${st.wallpaper === './wallpapers/' + w + '.jpg' ? 'selected' : ''}>${w}</option>`).join('')}</select>`)}
+        ${field('الشاشة الأولى', `<select id="s_home" onchange="S.settings.home=this.value;save()">
+          ${[['dashboard', 'الرئيسية'], ['desk', 'المكتب']].map(([v, l]) => `<option value="${v}" ${(st.home || 'dashboard') === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`,
+          'ما يفتح عليه النظام عند الدخول')}
+        <button class="btn ghost xs" onclick="wallpaperModal()"><i data-lucide="image"></i> خلفية الواجهة والوضع الزجاجي</button>
       </section>
 
       <section class="sec">
@@ -457,6 +459,8 @@ function paletteItems(q) {
   q = (q || '').trim().toLowerCase();
   const out = [];
   const cmds = [
+    { t: 'المكتب', i: 'layout-grid', a: () => go('desk') },
+    { t: 'خلفية الواجهة', i: 'image', a: () => wallpaperModal() },
     { t: 'الرئيسية', i: 'layout-dashboard', a: () => go('dashboard') },
     { t: 'تخطيط اليوم', i: 'calendar-clock', a: () => go('timebox') },
     { t: 'المهام', i: 'check-square', a: () => go('tasks') },
@@ -582,9 +586,13 @@ function boot() {
   $('#ctDate').textContent = new Date().toLocaleDateString('ar-SA-u-ca-gregory', { weekday: 'long', day: 'numeric', month: 'long' });
   renderNav();
   const h = (location.hash || '').replace('#', '').split('/');
-  if (h[0] && ROUTES[h[0]]) go(h[0], h[1]); else go('dashboard');
+  if (h[0] && ROUTES[h[0]]) go(h[0], h[1]); else go(S.settings.home === 'desk' ? 'desk' : 'dashboard');
   try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch (e) { }
-  setInterval(() => { if (CUR === 'dashboard') { repaintWidget('today'); repaintWidget('prayer'); } }, 60000);
+  setInterval(() => {
+    if (CUR === 'dashboard') { repaintWidget('today'); repaintWidget('prayer'); }
+    /* الخلفية المرتبطة بالساعة أو بوقت اليوم تتجدّد وحدها */
+    if (/hour|time/.test(S.settings.wpRotate || '')) applyTheme();
+  }, 60000);
 }
 
 /* زر رجوع المتصفح يتنقّل بين الشاشات بدل أن يخرج من النظام */
