@@ -151,6 +151,7 @@ function taskSort(x, y) {
 }
 function taskRow(t, after) {
   const late = t.due && t.due < today() && t.status !== 'done';
+  const isPri = priorityOfTask(t.id) >= 0;
   return `<div class="item ${t.status === 'done' ? 'done' : ''}">
     <span class="cbox ${t.status === 'done' ? 'on' : ''}" onclick="taskToggle('${t.id}')"></span>
     <span class="pri ${t.priority || 'none'}"></span>
@@ -158,16 +159,25 @@ function taskRow(t, after) {
       <b>${esc(t.title)}</b>
       ${(t.due || t.areaId) ? `<span class="tiny muted">${t.due ? (late ? '⚠ ' : '') + fmtShort(t.due) : ''}${t.due && t.areaId ? ' · ' : ''}${esc(areaName(t.areaId))}</span>` : ''}
     </div>
-    <span class="acts"><button class="icon-btn" onclick="taskDel('${t.id}')"><i data-lucide="trash-2"></i></button></span>
+    ${isPri ? `<i data-lucide="star" style="width:14px;height:14px;color:var(--accent)"></i>` : ''}
+    <span class="acts">
+      <button class="icon-btn" onclick="taskToPriority('${t.id}')" title="${isPri ? 'أزِلها من أولويات اليوم' : 'اجعلها من أولويات اليوم'}"><i data-lucide="star"></i></button>
+      <button class="icon-btn" onclick="taskDel('${t.id}')"><i data-lucide="trash-2"></i></button></span>
   </div>`;
 }
 function taskToggle(id) {
   const t = (S.tasks || []).find(x => x.id === id); if (!t) return;
   t.status = t.status === 'done' ? 'open' : 'done';
   t.doneAt = t.status === 'done' ? new Date().toISOString() : '';
+  syncPrioritiesFromTask(t);   // الأولوية المرتبطة تُشطب معها
   save(); render();
 }
-function taskDel(id) { S.tasks = S.tasks.filter(x => x.id !== id); S.blocks = (S.blocks || []).map(b => b.taskId === id ? Object.assign(b, { taskId: '' }) : b); save(); render(); }
+function taskDel(id) {
+  S.tasks = S.tasks.filter(x => x.id !== id);
+  S.blocks = (S.blocks || []).map(b => b.taskId === id ? Object.assign(b, { taskId: '' }) : b);
+  Object.keys(S.priorities || {}).forEach(d => (S.priorities[d] || []).forEach(p => { if (p && p.taskId === id) p.taskId = ''; }));
+  save(); render();
+}
 function taskModal(t) {
   t = t || {};
   openModal(t.id ? 'تعديل مهمة' : 'مهمة جديدة',
@@ -188,7 +198,11 @@ function taskModal(t) {
 function taskSave(id) {
   const title = $('#tt').value.trim(); if (!title) { toast('اكتب عنوان المهمة', 'bad'); return; }
   const o = { title, areaId: $('#ta').value, priority: $('#tp').value, due: $('#td').value, est: +$('#te').value || 30, goalId: $('#tg').value, notes: $('#tn').value };
-  if (id) Object.assign(S.tasks.find(x => x.id === id), o);
+  if (id) {
+    Object.assign(S.tasks.find(x => x.id === id), o);
+    /* تغيير اسم المهمة يغيّر نصّ الأولوية المرتبطة بها */
+    Object.keys(S.priorities || {}).forEach(d => (S.priorities[d] || []).forEach(p => { if (p && p.taskId === id) p.text = title; }));
+  }
   else S.tasks.unshift(Object.assign({ id: uid('t'), status: 'open', createdAt: new Date().toISOString(), doneAt: '' }, o));
   save(); closeModal(); render(); toast('حُفظت');
 }

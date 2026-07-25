@@ -75,7 +75,8 @@ WG.today = function () {
   const now = new Date().getHours() * 60 + new Date().getMinutes();
   const cur = blocks.find(b => now >= b.start && now < b.end);
   const next = blocks.filter(b => b.start > now).slice(0, 3);
-  const pr = (S.priorities[d] || []).filter(p => p.text.trim());
+  /* الخانات غير المكتوبة تُحفظ null داخل JSON — نتحقّق من العنصر قبل قراءته */
+  const pr = (S.priorities[d] || []).filter(p => p && (p.text || '').trim());
   if (!blocks.length && !pr.length)
     return `<div class="empty"><i data-lucide="calendar-plus"></i><p>لم تُخطّط اليوم بعد.</p>
       <button class="btn primary xs" style="margin-top:10px" onclick="go('timebox')">خطّط يومك</button></div>`;
@@ -407,22 +408,8 @@ WG.review = function () {
   return `<p class="sm muted">أغلق يومك بمراجعة قصيرة — دقيقتان تكفيان.</p>
     <button class="btn primary xs" style="width:100%;margin-top:10px" onclick="reviewModal()">ابدأ المراجعة</button>`;
 };
-function reviewModal(day) {
-  const d = day || today(), r = S.reviews[d] || {};
-  openModal('مراجعة ' + fmtDay(d),
-    `${field('أفضل ما حدث اليوم', inputHTML('rw', r.win, 'إنجاز، لحظة، درس…'))}
-     ${field('ما الذي أعاقني؟', inputHTML('rd', r.drag, 'تشتّت، تأجيل، ظرف…'))}
-     <div class="grid2">
-       ${field('المزاج (١–٥)', inputHTML('rm', r.mood || 3, '', 'number'))}
-       ${field('الطاقة (١–٥)', inputHTML('re', r.energy || 3, '', 'number'))}
-     </div>
-     ${field('ملاحظة حرّة', `<textarea id="rn">${esc(r.note || '')}</textarea>`)}`,
-    `<button class="btn ghost" onclick="closeModal()">إلغاء</button><button class="btn primary" onclick="reviewSave('${d}')">احفظ المراجعة</button>`, { wide: true });
-}
-function reviewSave(d) {
-  S.reviews[d] = { win: $('#rw').value.trim(), drag: $('#rd').value.trim(), mood: clamp(+$('#rm').value || 3, 1, 5), energy: clamp(+$('#re').value || 3, 1, 5), note: $('#rn').value };
-  save(); closeModal(); render(); toast('حُفظت المراجعة', 'good');
-}
+/* المراجعة صار لها صفحة كاملة تحفظ كل المراجعات — والنافذة تحوّل إليها */
+function reviewModal(day) { closeModal(); go('daily', day || today()); }
 
 /* — تقويم الشهر المصغّر — */
 WG.calendar = function () {

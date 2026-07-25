@@ -18,13 +18,19 @@ public/app/index.html    الهيكل + كل التنسيقات (نظام رمو
 public/app/js/core.js    الحالة S · التخزين · مزامنة Supabase · النوافذ · الأدوات المشتركة
 public/app/js/widgets.js ويدجتس اللوحة (كل ويدجت دالة في الكائن WG)
 public/app/js/areas.js   جوانب الحياة · محرّك الأقسام · المهام
-public/app/js/timebox.js تخطيط اليوم بالكتل الزمنية
-public/app/js/app.js     التوجيه · اللوحة · المراجعة · الإعدادات · الدخول · الإقلاع
+public/app/js/timebox.js تخطيط اليوم بالكتل الزمنية · أولويات اليوم
+public/app/js/canvas.js  المساحة الحرة: ألواح لا نهائية على فكرة Freeform
+public/app/js/work.js    صفحة العمل: حملات · اجتماعات · مؤشرات — وفيه محرّك الكانبان `kb*`
+public/app/js/business.js صفحة التجارة: مسار الصفقات · تقويم المحتوى (يستعمل `kb*`)
+public/app/js/app.js     التوجيه · اللوحة · مراجعة اليوم · المراجعة الأسبوعية · الإعدادات · الدخول
+public/mirsad/           تطبيق مرصاد (لحاتم النجار) — إعداداته في firebase-config.js
 supabase/life_os.sql     الجداول وسياسات الحماية RLS
 test/smoke.js            اختبار يشغّل كل الشاشات في DOM مصغّرة
 ```
 
-الترتيب في `index.html` مهم: `core` ← `widgets` ← `areas` ← `timebox` ← `app`.
+الترتيب في `index.html` مهم:
+`core` ← `widgets` ← `areas` ← `timebox` ← `canvas` ← `work` ← `business` ← `app`
+(`business` بعد `work` لأنه يستعمل `kbHTML`/`kbBind`/`tabsHTML` منه).
 
 ## نموذج البيانات
 
@@ -33,9 +39,18 @@ test/smoke.js            اختبار يشغّل كل الشاشات في DOM م
 
 ```
 S.profile · S.settings · S.areas[] · S.tasks[] · S.blocks[] · S.priorities{}
-S.habits{list,log} · S.goals[] · S.notes[] · S.capture[] · S.reviews{} · S.prayerLog{}
+S.habits{list,log} · S.goals[] · S.notes[] · S.capture[] · S.boards[] · S.reviews{} · S.prayerLog{}
+S.work{campaigns,meetings,kpis} · S.biz{deals,content}
 S.widgets[] · S.links[] · S.focus · S.prayer
 ```
+
+**روابط بين الكيانات — لا تكسرها:**
+- `S.priorities[يوم][i].taskId` يربط الأولوية بمهمة حقيقية. تُكتب أولوية ← تُنشأ مهمة،
+  ويُنجَز أيٌّ منهما ← يُشطب الآخر. أي دالة تُنجز مهمة يجب أن تنادي `syncPrioritiesFromTask(t)`،
+  وأي حذف مهمة يجب أن يفكّ `taskId` من الأولويات.
+- `S.blocks[].taskId` يربط الكتلة الزمنية بمهمة.
+- القوائم (`links`, `widgets`, `areas`) تُستبدل كاملة في `deepMerge`، فأي عنصر جديد
+  يُضاف إلى `defaultState()` لن يصل لمن عنده بيانات محفوظة إلا عبر `SEEDS` في `migrate()`.
 
 **قواعد التعامل مع الحالة:**
 - بعد أي تغيير على `S` نادِ **`save()`** — هي تحفظ محلياً وتجدول المزامنة السحابية.

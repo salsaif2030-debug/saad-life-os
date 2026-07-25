@@ -24,3 +24,10 @@ backups/
 # ملفات مؤقتة
 *.log
 .cache/
+
+# مصادر أصلية ثقيلة — المستعمَل منها منسوخ ومضغوط داخل public/
+# (الخطوط في public/fonts · الخلفيات في public/app/wallpapers · مرصاد في public/mirsad)
+thmanyah typeface/
+خط النظام/
+خلفيات النظام/
+تطبيق مرصاد/

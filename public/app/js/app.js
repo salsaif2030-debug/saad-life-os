@@ -8,16 +8,21 @@ const ROUTES = {
   tasks:     renderTasks,
   area:      renderArea,
   notes:     renderNotes,
+  daily:     renderDaily,
+  canvas:    renderCanvas,
+  work:      renderWork,
+  business:  renderBusiness,
   review:    renderReview,
   settings:  renderSettings
 };
-const TITLES = { dashboard: 'الرئيسية', timebox: 'تخطيط اليوم', tasks: 'المهام', notes: 'الملاحظات', review: 'المراجعة الأسبوعية', settings: 'الإعدادات' };
+const TITLES = { dashboard: 'الرئيسية', timebox: 'تخطيط اليوم', tasks: 'المهام', notes: 'الملاحظات', daily: 'مراجعة اليوم',
+                 canvas: 'المساحة الحرة', work: 'العمل', business: 'التجارة', review: 'المراجعة الأسبوعية', settings: 'الإعدادات' };
 
 function go(view, arg) {
   CUR = view; CUR_ARG = arg || null;
   location.hash = view + (arg ? '/' + arg : '');
   $('#ctTitle').textContent = view === 'area' ? (areaName(arg) || 'جانب') : (TITLES[view] || '');
-  $$('#nav a, #navFoot a').forEach(el => el.classList.toggle('active', el.dataset.v === (view === 'area' ? 'area:' + arg : view)));
+  $$('#nav a, #navFoot a, #tabbar a').forEach(el => el.classList.toggle('active', el.dataset.v === (view === 'area' ? 'area:' + arg : view)));
   (ROUTES[view] || renderDashboard)(arg);
   $('#sidebar').classList.remove('open');
   const sc = $('.scrim'); if (sc) sc.remove();
@@ -36,7 +41,11 @@ function renderNav() {
     <a data-v="timebox" onclick="go('timebox')"><i data-lucide="calendar-clock"></i> تخطيط اليوم</a>
     <a data-v="tasks" onclick="go('tasks')"><i data-lucide="check-square"></i> المهام ${openT ? `<span class="cnt">${openT}</span>` : ''}</a>
     <a data-v="notes" onclick="go('notes')"><i data-lucide="notebook-pen"></i> الملاحظات ${inbox ? `<span class="cnt">${inbox}</span>` : ''}</a>
-    <a data-v="review" onclick="go('review')"><i data-lucide="line-chart"></i> المراجعة</a>
+    <a data-v="work" onclick="go('work')"><i data-lucide="briefcase"></i> العمل</a>
+    <a data-v="business" onclick="go('business')"><i data-lucide="trending-up"></i> التجارة</a>
+    <a data-v="canvas" onclick="go('canvas','')"><i data-lucide="layout-template"></i> المساحة الحرة</a>
+    <a data-v="daily" onclick="go('daily')"><i data-lucide="moon"></i> مراجعة اليوم ${S.reviews[today()] ? '' : `<span class="cnt">•</span>`}</a>
+    <a data-v="review" onclick="go('review')"><i data-lucide="line-chart"></i> المراجعة الأسبوعية</a>
     <div class="navsec">جوانب الحياة</div>
     ${S.areas.filter(a => !a.hidden).map(a => `<a data-v="area:${a.id}" onclick="go('area','${a.id}')">
       <i data-lucide="${esc(a.icon)}" style="color:${a.color}"></i> ${esc(a.name)}</a>`).join('')}
@@ -45,8 +54,18 @@ function renderNav() {
     <a onclick="customizeWidgets()"><i data-lucide="layout-grid"></i> تخصيص اللوحة</a>
     <a data-v="settings" onclick="go('settings')"><i data-lucide="settings"></i> الإعدادات</a>
     ${CLOUD_ON ? `<a onclick="logout()"><i data-lucide="log-out"></i> خروج</a>` : ''}`;
+  /* شريط الجوال السفلي: أكثر خمس شاشات استعمالاً في متناول الإبهام */
+  $('#tabbar').innerHTML = TABS.map(([v, label, icon, arg]) =>
+    `<a data-v="${v}" onclick="go('${v}'${arg !== undefined ? `,'${arg}'` : ''})"><i data-lucide="${icon}"></i>${label}</a>`).join('');
   refreshIcons();
 }
+const TABS = [
+  ['dashboard', 'الرئيسية', 'layout-dashboard'],
+  ['timebox', 'يومي', 'calendar-clock'],
+  ['tasks', 'المهام', 'check-square'],
+  ['canvas', 'المساحة', 'layout-template', ''],
+  ['daily', 'المراجعة', 'moon']
+];
 function toggleSidebar() {
   const sb = $('#sidebar');
   if (innerWidth <= 900) {
@@ -131,6 +150,103 @@ function captureToNote(id) {
   const c = S.capture.find(x => x.id === id); if (!c) return;
   c.done = true; S.notes.unshift({ id: uid('n'), title: c.text.slice(0, 40), body: c.text, areaId: '', pinned: false, updatedAt: new Date().toISOString() });
   save(); render(); toast('حُوّلت لملاحظة');
+}
+
+/* ============================================================
+   مراجعة اليوم — صفحة مستقلة تحفظ كل مراجعة في قائمة دائمة
+   ============================================================ */
+let DAILY_DATE = today();
+
+function reviewStreak() {
+  let n = 0, d = today();
+  if (!S.reviews[d]) d = dayShift(d, -1);      // لم تراجع اليوم بعد — لا تكسر السلسلة قبل الليل
+  while (S.reviews[d]) { n++; d = dayShift(d, -1); }
+  return n;
+}
+function renderDaily(dateArg) {
+  if (dateArg) DAILY_DATE = dateArg;
+  const d = DAILY_DATE, r = S.reviews[d] || {};
+  const all = Object.keys(S.reviews || {}).filter(k => S.reviews[k]).sort().reverse();
+  const moods = all.slice(0, 30).map(k => S.reviews[k].mood || 0).filter(Boolean);
+  const avg = moods.length ? Math.round(moods.reduce((a, b) => a + b, 0) / moods.length * 10) / 10 : '—';
+  const blocks = (S.blocks || []).filter(b => b.date === d);
+  const doneB = blocks.filter(b => b.done).length;
+  const doneT = (S.tasks || []).filter(t => t.doneAt && t.doneAt.slice(0, 10) === d).length;
+  const tomorrow = dayShift(d, 1);
+
+  $('#view').innerHTML = `
+    <div class="page-head">
+      <div><h1 class="serif">مراجعة اليوم</h1><div class="sub">${fmtDay(d)} · دقيقتان قبل النوم تكفيان</div></div>
+      <div class="row">
+        <button class="icon-btn" onclick="dailyGo(-1)" title="أمس"><i data-lucide="chevron-right"></i></button>
+        <input type="date" value="${d}" onchange="DAILY_DATE=this.value;render()" style="max-width:154px;font-size:13px;padding:7px 10px">
+        <button class="icon-btn" onclick="dailyGo(1)" title="غداً"><i data-lucide="chevron-left"></i></button>
+        <button class="btn ghost xs" onclick="DAILY_DATE=today();render()">اليوم</button>
+      </div>
+    </div>
+
+    <div class="widgets" style="margin-bottom:var(--gap)">
+      ${statCard('سلسلة المراجعة', reviewStreak() + ' يوم', 'flame')}
+      ${statCard('مراجعات محفوظة', all.length, 'book-open')}
+      ${statCard('متوسّط المزاج', avg + (avg === '—' ? '' : '/5'), 'smile')}
+      ${statCard('أُنجز اليوم', doneB + ' كتلة · ' + doneT + ' مهمة', 'check-check')}
+    </div>
+
+    <div class="two-col">
+      <section class="card pad">
+        <div class="between" style="margin-bottom:14px">
+          <h3 style="font-size:15px">${r.win || r.note ? 'مراجعة محفوظة' : 'اكتب مراجعتك'}</h3>
+          ${r.win || r.note ? `<span class="chip"><i data-lucide="check"></i> محفوظة</span>` : ''}
+        </div>
+        ${field('أفضل ما حدث اليوم', inputHTML('dw', r.win, 'إنجاز، لحظة، درس…'))}
+        ${field('ما الذي أعاقني؟', inputHTML('dd', r.drag, 'تشتّت، تأجيل، ظرف…'))}
+        <div class="grid2">
+          ${field('المزاج (١–٥)', `<input id="dm" type="number" min="1" max="5" value="${r.mood || 3}">`)}
+          ${field('الطاقة (١–٥)', `<input id="de" type="number" min="1" max="5" value="${r.energy || 3}">`)}
+        </div>
+        ${field('ملاحظة حرّة', `<textarea id="dn">${esc(r.note || '')}</textarea>`)}
+        ${field('أهم شيء في الغد', inputHTML('dt', r.tomorrow, 'ما الذي لو أنجزته غداً كفى؟'),
+          'يُكتب تلقائياً في أولويات ' + fmtShort(tomorrow) + ' ويصير مهمة')}
+        <button class="btn primary" style="width:100%" onclick="dailySave('${d}')">
+          <i data-lucide="moon"></i> ${r.win || r.note ? 'حدّث المراجعة' : 'أغلق اليوم'}</button>
+      </section>
+
+      <section class="card pad">
+        <div class="between" style="margin-bottom:12px"><h3 style="font-size:15px">كل مراجعاتي</h3>
+          <span class="tiny muted">${all.length}</span></div>
+        ${all.length ? `<div style="max-height:62vh;overflow-y:auto">${all.map(k => {
+          const x = S.reviews[k];
+          return `<div class="rec" onclick="DAILY_DATE='${k}';render()" style="cursor:pointer;${k === d ? 'border-color:var(--accent)' : ''}">
+            <div class="between"><b>${fmtDay(k)}</b>
+              <span class="tiny muted">مزاج ${x.mood || '—'} · طاقة ${x.energy || '—'}</span></div>
+            <div class="kv">${esc(x.win || x.note || '—')}</div>
+            ${x.drag ? `<div class="kv" style="color:var(--bad);opacity:.75">عائق: ${esc(x.drag)}</div>` : ''}
+          </div>`;
+        }).join('')}</div>` : `<div class="empty"><i data-lucide="moon"></i><p>لا مراجعات محفوظة بعد.<br>أغلق يومك الليلة وابدأ السلسلة.</p></div>`}
+      </section>
+    </div>`;
+  refreshIcons();
+}
+function dailyGo(n) { DAILY_DATE = dayShift(DAILY_DATE, n); render(); }
+function dailySave(d) {
+  const tm = $('#dt').value.trim();
+  S.reviews[d] = {
+    win: $('#dw').value.trim(), drag: $('#dd').value.trim(),
+    mood: clamp(+$('#dm').value || 3, 1, 5), energy: clamp(+$('#de').value || 3, 1, 5),
+    note: $('#dn').value, tomorrow: tm, savedAt: new Date().toISOString()
+  };
+  /* «أهم شيء في الغد» يصير أولوية أولى للغد — ومنها مهمة، فتجدها بانتظارك صباحاً */
+  if (tm) {
+    const t = dayShift(d, 1);
+    const taken = (S.priorities[t] || []).findIndex(p => p && (p.text || '').trim() === tm);
+    if (taken < 0) {
+      let slot = -1;
+      for (let i = 0; i < 3; i++) { const p = (S.priorities[t] || [])[i]; if (!p || !(p.text || '').trim()) { slot = i; break; } }
+      if (slot >= 0) setPriority(t, slot, tm);
+    }
+  }
+  save(); renderNav(); render();
+  toast('حُفظت المراجعة — سلسلتك ' + reviewStreak() + ' يوم', 'good');
 }
 
 /* ============================================================
@@ -220,6 +336,7 @@ function renderSettings() {
       <section class="sec">
         <div class="sh"><i data-lucide="user"></i><h3>الملف الشخصي</h3></div>
         ${field('الاسم', inputHTML('sp_name', p.name, ''))}
+        ${field('المسمّى الوظيفي', inputHTML('sp_role', p.role, 'أخصائي تسويق'), 'يظهر في صفحة العمل')}
         ${field('شعارك اليومي', inputHTML('sp_motto', p.motto, 'جملة تراها كل صباح'))}
         ${field('المدينة', inputHTML('sp_city', p.city, 'الرياض'))}
         <button class="btn primary xs" onclick="saveProfile()">حفظ</button>
@@ -288,6 +405,7 @@ function renderSettings() {
 function setAccent(c) { S.settings.accent = c; save(); applyTheme(); render(); }
 function saveProfile() {
   S.profile.name = $('#sp_name').value.trim();
+  S.profile.role = $('#sp_role').value.trim();
   S.profile.motto = $('#sp_motto').value.trim();
   S.profile.city = $('#sp_city').value.trim();
   save(); PRAYER.date = ''; WX.day = ''; toast('حُفظ', 'good');
@@ -342,6 +460,9 @@ function paletteItems(q) {
     { t: 'الرئيسية', i: 'layout-dashboard', a: () => go('dashboard') },
     { t: 'تخطيط اليوم', i: 'calendar-clock', a: () => go('timebox') },
     { t: 'المهام', i: 'check-square', a: () => go('tasks') },
+    { t: 'العمل', i: 'briefcase', a: () => go('work') },
+    { t: 'التجارة', i: 'trending-up', a: () => go('business') },
+    { t: 'المساحة الحرة', i: 'layout-template', a: () => go('canvas', '') },
     { t: 'المراجعة الأسبوعية', i: 'line-chart', a: () => go('review') },
     { t: 'مهمة جديدة', i: 'plus', a: () => taskModal() },
     { t: 'التقاط سريع', i: 'inbox', a: () => quickCapture() },
@@ -414,7 +535,36 @@ async function doSignup() {
 }
 async function logout() { if (sb) await sb.auth.signOut(); location.reload(); }
 
+/* استعادة كلمة المرور */
+async function doForgot() {
+  const em = $('#em').value.trim().toLowerCase();
+  if (!em) { lerr('اكتب بريدك في الخانة أعلاه أولاً، ثم اضغط «نسيت كلمة المرور؟».'); return; }
+  lerr(''); lmsg('جارٍ إرسال رابط الاستعادة…');
+  const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
+  if (error && /rate|too many|seconds/i.test(error.message)) { lmsg(''); lerr('محاولات كثيرة — انتظر دقيقة ثم أعد المحاولة.'); return; }
+  lmsg('إن كان هذا البريد مسجّلاً فستصلك رسالة فيها رابط. افتحه من هذا الجهاز نفسه، وراجع «الرسائل غير المرغوبة».');
+}
+function newPasswordModal() {
+  openModal('اختر كلمة مرور جديدة',
+    `${field('كلمة المرور الجديدة', `<input id="np1" type="password" autocomplete="new-password" placeholder="٨ أحرف على الأقل">`)}
+     ${field('أعِد كتابتها', `<input id="np2" type="password" autocomplete="new-password">`)}
+     <p class="tiny muted" id="npErr" style="color:var(--bad)"></p>`,
+    `<button class="btn primary" onclick="setNewPassword()">حفظ كلمة المرور</button>`);
+}
+async function setNewPassword() {
+  const p1 = $('#np1').value, p2 = $('#np2').value, err = $('#npErr');
+  if (p1.length < 8) { err.textContent = 'كلمة المرور ٨ أحرف على الأقل.'; return; }
+  if (p1 !== p2) { err.textContent = 'الكلمتان غير متطابقتين.'; return; }
+  const { data, error } = await sb.auth.updateUser({ password: p1 });
+  if (error) { err.textContent = 'تعذّر الحفظ: ' + error.message + ' — قد يكون الرابط منتهياً، اطلب رابطاً جديداً.'; return; }
+  closeModal();
+  history.replaceState(null, '', location.origin + location.pathname);
+  toast('حُدّثت كلمة المرور', 'good');
+  if (!USER_READY) await enterApp(data.user);
+}
+
 async function enterApp(user) {
+  if (USER && user && USER.id === user.id) return;   // منع الدخول مرتين
   USER = user;
   lmsg('جارٍ تحميل بياناتك…');
   try { await loadCloud(); } catch (e) { lmsg(''); lerr('تعذّر تحميل البيانات: ' + e.message); return; }
@@ -437,11 +587,25 @@ function boot() {
   setInterval(() => { if (CUR === 'dashboard') { repaintWidget('today'); repaintWidget('prayer'); } }, 60000);
 }
 
+/* زر رجوع المتصفح يتنقّل بين الشاشات بدل أن يخرج من النظام */
+window.addEventListener('hashchange', () => {
+  if (!USER_READY) return;
+  const [v, a] = (location.hash || '').replace('#', '').split('/');
+  if (v && ROUTES[v] && (v !== CUR || (a || null) !== CUR_ARG)) {
+    CUR = v; CUR_ARG = a || null;
+    $('#ctTitle').textContent = v === 'area' ? (areaName(a) || 'جانب') : (TITLES[v] || '');
+    $$('#nav a, #navFoot a, #tabbar a').forEach(el => el.classList.toggle('active', el.dataset.v === (v === 'area' ? 'area:' + a : v)));
+    (ROUTES[v] || renderDashboard)(a);
+  }
+});
+
 (async function start() {
   loadLocal();
   applyTheme();
   if (!CLOUD_ON) { boot(); return; }
   $('#loginView').classList.remove('hidden');
+  /* رابط استعادة كلمة المرور يفتح النظام في وضع «اختر كلمة مرور جديدة» */
+  sb.auth.onAuthStateChange((event) => { if (event === 'PASSWORD_RECOVERY') newPasswordModal(); });
   const { data } = await sb.auth.getSession();
-  if (data && data.session) await enterApp(data.session.user);
+  if (data && data.session && !/type=recovery/.test(location.hash)) await enterApp(data.session.user);
 })();

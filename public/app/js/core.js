@@ -145,20 +145,30 @@ function defaultWidgets() {
 function defaultState() {
   return {
     v: 1,
-    profile: { name: 'سعد السيف', email: '', city: 'الرياض', country: 'Saudi Arabia', lat: 24.71, lon: 46.68, motto: 'إن مع العسر يسرا' },
+    profile: { name: 'سعد السيف', role: 'أخصائي تسويق', email: '', city: 'الرياض', country: 'Saudi Arabia', lat: 24.71, lon: 46.68, motto: 'إن مع العسر يسرا' },
     settings: {
       theme: 'auto', accent: '#5b6cf5', density: 'comfy',
       dayStart: '05:00', dayEnd: '24:00', slotMin: 30,
-      wallpaper: '', ui: { sbW: 248, sbCollapsed: false }
+      wallpaper: '', seeded: [], ui: { sbW: 248, sbCollapsed: false }
     },
     areas: defaultAreas(),
     tasks: [],      // {id,title,areaId,goalId,status,priority,due,est,notes,createdAt,doneAt}
     blocks: [],     // {id,date,start,end,title,taskId,areaId,type,done,notes}
-    priorities: {}, // {'YYYY-MM-DD':[{id,text,done}]}  ← أولويات اليوم الثلاث
+    priorities: {}, // {'YYYY-MM-DD':[{id,text,done,taskId}]}  ← أولويات اليوم الثلاث، taskId يربطها بمهمة
     habits: { list: [], log: {} },  // log: {'YYYY-MM-DD':{habitId:true}}
     goals: [],      // {id,title,areaId,horizon,target,current,due,done}
     notes: [],      // {id,title,body,areaId,pinned,updatedAt}
     capture: [],    // {id,text,createdAt,done}
+    boards: [],     // المساحة الحرة: {id,title,updatedAt,items:[{id,kind,x,y,w,h,text,color,done}]}
+    work: {         // صفحة العمل
+      campaigns: [],// {id,title,stage,channel,owner,due,notes}
+      meetings: [], // {id,title,date,people,summary,actions:[{id,text,taskId}]}
+      kpis: []      // {id,name,current,target,unit,period,dir}
+    },
+    biz: {          // صفحة التجارة
+      deals: [],    // {id,name,company,value,stage,contact,nextStep,nextAt,notes}
+      content: []   // {id,title,platform,stage,date,link,brief}
+    },
     reviews: {},    // {'YYYY-MM-DD':{win,drag,mood,energy,note}}
     prayerLog: {},  // {'YYYY-MM-DD':{Fajr:'mosque'|'ontime'|'late'}}
     widgets: defaultWidgets(),
@@ -168,7 +178,8 @@ function defaultState() {
       { id: 'l3', label: 'WhatsApp', url: 'https://web.whatsapp.com',   icon: 'message-square' },
       { id: 'l4', label: 'التقويم',  url: 'https://calendar.google.com',icon: 'calendar' },
       { id: 'l5', label: 'الملفات',  url: 'https://drive.google.com',   icon: 'folder' },
-      { id: 'l6', label: 'Claude',   url: 'https://claude.ai',          icon: 'sparkles' }
+      { id: 'l6', label: 'Claude',   url: 'https://claude.ai',          icon: 'sparkles' },
+      { id: 'l7', label: 'Keep',     url: 'https://keep.google.com',    icon: 'sticky-note' }
     ],
     focus: { work: 25, brk: 5, goalMin: 120, log: {} },
     prayer: { method: 4 }
@@ -188,14 +199,34 @@ function deepMerge(a, b) {
   return a;
 }
 
+/* ترقية بيانات قديمة: القوائم تُستبدل كاملة في deepMerge،
+   فما يُضاف لاحقاً إلى defaultState لا يصل لمن عنده بيانات محفوظة إلا من هنا.
+   كل إضافة تُزرع مرّة واحدة فقط — فإن حذفها المستخدم بعدها لا تعود. */
+const SEEDS = [
+  { key: 'link_keep', run: () => {
+      if (!(S.links || []).some(l => (l.url || '').includes('keep.google.com')))
+        S.links.push({ id: 'l7', label: 'Keep', url: 'https://keep.google.com', icon: 'sticky-note' });
+    } },
+  { key: 'link_mirsad', run: () => {
+      if (!(S.links || []).some(l => (l.url || '').includes('/mirsad')))
+        S.links.push({ id: 'l8', label: 'مرصاد', url: '../mirsad/', icon: 'clapperboard' });
+    } }
+];
+function migrate() {
+  if (!Array.isArray(S.areas) || !S.areas.length) S.areas = defaultAreas();
+  if (!Array.isArray(S.widgets) || !S.widgets.length) S.widgets = defaultWidgets();
+  if (!Array.isArray(S.links)) S.links = [];
+  const done = S.settings.seeded = S.settings.seeded || [];
+  SEEDS.forEach(s => { if (!done.includes(s.key)) { done.push(s.key); s.run(); } });
+  return S;
+}
+
 function loadLocal() {
   try {
     const raw = localStorage.getItem(APP_KEY);
     S = raw ? deepMerge(defaultState(), JSON.parse(raw)) : defaultState();
   } catch (e) { S = defaultState(); }
-  if (!Array.isArray(S.areas) || !S.areas.length) S.areas = defaultAreas();
-  if (!Array.isArray(S.widgets) || !S.widgets.length) S.widgets = defaultWidgets();
-  return S;
+  return migrate();
 }
 
 function save() {
@@ -229,7 +260,7 @@ async function loadCloud() {
   if (rows && rows.length) {
     STATE_ID = rows[0].id;
     S = deepMerge(defaultState(), rows[0].data || {});
-    if (!S.areas || !S.areas.length) S.areas = defaultAreas();
+    migrate();
   } else {
     const { data: ins, error: e2 } = await sb.from('life_state').insert({ data: S, owner: USER.id }).select('id').single();
     if (e2) throw e2;

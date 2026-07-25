@@ -23,7 +23,18 @@ global.document = {
   querySelectorAll() { return []; },
   createElement: mkEl, addEventListener() { }
 };
-global.window = { supabase: null, lucide: null, innerWidth: 1440, addEventListener() { }, Notification: undefined, scrollTo() { }, matchMedia: () => ({ matches: false, addEventListener() { } }) };
+/* Supabase مزيّف: النظام يُنشئ العميل عند الإقلاع، والاختبار لا يلمس الشبكة */
+const sbStub = {
+  createClient: () => ({
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange() { }, signInWithPassword() { }, signUp() { }, signOut() { },
+      resetPasswordForEmail() { }, updateUser() { }
+    },
+    from: () => ({ select: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }), update: () => ({ eq() { } }), insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 'x' } }) }) }) })
+  })
+};
+global.window = { supabase: sbStub, lucide: null, innerWidth: 1440, addEventListener() { }, Notification: undefined, scrollTo() { }, matchMedia: () => ({ matches: false, addEventListener() { } }) };
 global.matchMedia = window.matchMedia;
 global.innerWidth = 1440;
 global.location = { hash: '', origin: 'http://localhost', pathname: '/app/', reload() { } };
@@ -33,7 +44,7 @@ global.setInterval = () => 0;
 global.requestAnimationFrame = () => 0;
 global.Notification = undefined;
 
-const files = ['core.js', 'widgets.js', 'areas.js', 'timebox.js', 'app.js'];
+const files = ['core.js', 'widgets.js', 'areas.js', 'timebox.js', 'canvas.js', 'work.js', 'business.js', 'app.js'];
 const code = files.map(f => fs.readFileSync(path.join(APP, 'js', f), 'utf8')).join('\n;\n');
 const TESTS = fs.readFileSync(__dirname + '/tests-body.js', 'utf8');
 const errs = [];
